@@ -8,9 +8,12 @@ class Settings(BaseSettings):
 
     host: str
     port: int
+    database_url: str
     log_level: str = "INFO"
+
 
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()  # type: ignore[call-arg]
+

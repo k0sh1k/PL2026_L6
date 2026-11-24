@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}         # <-- Берем из .env
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD} # <-- Берем из .env
+      - POSTGRES_DB=${POSTGRES_DB}             # <-- Берем из .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  storage:
+    build: ./storage
+    ports:
+      - "8001:8001"
+    environment:
+      - ST_HOST=0.0.0.0
+      - ST_PORT=8001
+      - ST_DATABASE_URL=${DATABASE_URL}        # <-- Берем из .env
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - GW_HOST=0.0.0.0
+      - GW_PORT=8000
+      - GW_STORAGE_BASE_URL=http://storage:8001
+      - GW_STORAGE_TIMEOUT_S=5.0
+    depends_on:
+      storage:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

@@ -1,5 +1,5 @@
 import logging
-
+import psycopg
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -26,9 +26,24 @@ def create_app() -> FastAPI:
     settings = get_settings()
     logging.basicConfig(level=settings.log_level)
 
+    try:
+        with psycopg.connect(settings.database_url) as conn:
+            log.info("Successfully connected to PostgreSQL")
+    except Exception as e:
+        log.error(f"Failed to connect to DB: {e}")
+        # Если базы нет, приложение упадет (так и должно быть)
+        raise e
+    
     service = DeviceService(InMemoryDeviceRepository())
 
     app = FastAPI(title="storage")
+
+    # === ДОБАВЛЯЕМ HEALTHCHECK СЮДА ===
+    @app.get("/health")
+    def health():
+        return {"status": "ok"}
+    # ===================================
+
     app.include_router(build_router(service))
     app.add_exception_handler(DeviceNotFound, _error(404, "device_not_found"))
     app.add_exception_handler(DuplicateDevice, _error(409, "duplicate_device"))

@@ -35,6 +35,13 @@ def create_app(storage: StorageClient | None = None) -> FastAPI:
         storage = SmartHomeClient(s.storage_base_url, s.storage_timeout_s)
 
     app = FastAPI(title="api-gateway")
+    
+    # ДОБАВЛЯЕМ HEALTHCHECK 
+    @app.get("/health")
+    def health():
+        return {"status": "ok"}
+    # =============================
+
     app.include_router(build_router(DeviceFacade(storage)))
     app.add_exception_handler(DeviceNotFound, _error(404, "device_not_found"))
     app.add_exception_handler(DeviceConflict, _error(409, "device_conflict"))
@@ -45,6 +52,9 @@ def create_app(storage: StorageClient | None = None) -> FastAPI:
 
 def get_app() -> FastAPI:
     return create_app()
+
+# ДОБАВЛЯЕМ ГЛОБАЛЬНУЮ ПЕРЕМЕННУЮ ДЛЯ UVICORN ===
+app = create_app()
 
 
 if __name__ == "__main__":
