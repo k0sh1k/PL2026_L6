@@ -1,5 +1,6 @@
 # Настройки читаются из окружения / .env, значений порта по умолчанию нет
 from functools import lru_cache
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 

@@ -1,4 +1,5 @@
 import logging
+
 import psycopg
 import uvicorn
 from fastapi import FastAPI, Request
@@ -27,7 +28,7 @@ def create_app() -> FastAPI:
     logging.basicConfig(level=settings.log_level)
 
     try:
-        with psycopg.connect(settings.database_url) as conn:
+        with psycopg.connect(settings.database_url):
             log.info("Successfully connected to PostgreSQL")
     except Exception as e:
         log.error(f"Failed to connect to DB: {e}")
