@@ -32,7 +32,7 @@ def create_app() -> FastAPI:
     except Exception as e:
         log.error(f"Failed to connect to DB: {e}")
         # Если базы нет, приложение упадет (так и должно быть)
-        raise e
+        raise
     
     service = DeviceService(InMemoryDeviceRepository())
 
