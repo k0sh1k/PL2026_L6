@@ -1,66 +1,80 @@
-# Smart Home: two FastAPI services (lab 5)
+```markdown
+# Умный дом: Микросервисная архитектура (ЛР6)
 
-Two independent services:
+Проект состоит из двух FastAPI-сервисов (`api-gateway` и `storage`) и базы данных PostgreSQL. Приложение упаковано в Docker-контейнеры, настроен автоматический конвейер CI на GitHub Actions.
 
-- `api-gateway` (port 8000): external API, validation, orchestration, resilience.
-- `storage` (port 8001): owns device data (in-memory dict).
+## Архитектура
+- **api-gateway** (порт 8000) — шлюз для взаимодействия с клиентами.
+- **storage** (порт 8001) — сервис хранения данных.
+- **db** — база данных PostgreSQL 16 (порт 5432).
 
-The gateway calls storage over HTTP with httpx. Details: `docs/architecture.md`.
+## Запуск приложения через Docker Compose
 
-## Layout
+1. Создайте файл с переменными окружения на основе шаблона:
+   ```bash
+   cp .env.example .env
+   ```
 
-    api-gateway/app/{api,domain,storage}, config.py, main.py
-    storage/app/{api,domain,storage},     config.py, main.py
-    docs/architecture.md
-    scripts/demo.sh
+2. Соберите образы и запустите контейнеры в фоновом режиме:
+   ```bash
+   docker compose up --build -d
+   ```
 
-## Setup (each service has its own venv)
+3. Дождитесь, пока все сервисы пройдут healthcheck (обычно 10-15 секунд). Проверить статус можно командой:
+   ```bash
+   docker compose ps
+   ```
+   *Все три контейнера (`db`, `storage`, `api-gateway`) должны иметь статус `healthy` или `running`.*
 
-    cd storage
-    python3 -m venv .venv && source .venv/bin/activate
-    pip install -r requirements.txt
-    cp .env.example .env
+## Проверка доступности (Healthcheck)
 
-    cd ../api-gateway
-    python3 -m venv .venv && source .venv/bin/activate
-    pip install -r requirements.txt
-    cp .env.example .env
+Для проверки работоспособности сервисов выполните:
+```bash
+# Проверка API Gateway
+curl http://localhost:8000/health
 
-## Configuration (pydantic-settings, env or .env)
+# Проверка Storage
+curl http://localhost:8001/health
+```
+Оба сервиса должны вернуть JSON: `{"status":"ok"}`.
 
-| Service | Variable | Meaning |
-|---|---|---|
-| storage | ST_HOST, ST_PORT, ST_LOG_LEVEL | bind address, port, log level |
-| gateway | GW_HOST, GW_PORT | bind address, port |
-| gateway | GW_STORAGE_BASE_URL | address of storage |
-| gateway | GW_STORAGE_TIMEOUT_S | timeout of calls to storage |
-| gateway | GW_LOG_LEVEL | log level |
+## Локальный запуск проверок и тестов
 
-Required variables have no defaults: a missing one fails at startup.
+Для запуска тестов без Docker выполните следующие шаги из корня проекта:
 
-## Run (two terminals, storage first)
+1. Создайте и активируйте виртуальное окружение:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
 
-    cd storage && source .venv/bin/activate && python -m app.main
-    cd api-gateway && source .venv/bin/activate && python -m app.main
+2. Установите зависимости (включая dev-инструменты):
+   ```bash
+   pip install -r storage/requirements.txt
+   pip install -r api-gateway/requirements.txt
+   pip install ruff mypy pytest
+   ```
 
-## API (via gateway)
+3. Запустите линтер, проверку типов и тесты:
+   ```bash
+   # Линтинг
+   ruff check storage api-gateway
 
-- `POST /devices` -> 201
-- `GET /devices/{id}` -> 200 / 404
-- `GET /devices/search?q=...` -> 200
-- Errors: 404 not found, 409 duplicate, 422 invalid, 503 storage unavailable.
-  Error body: `{"error": "<code>", "detail": "<text>"}`.
+   # Проверка типов
+   mypy storage/app api-gateway/app
 
-## End-to-end demo
+   # Запуск тестов (по очереди, чтобы избежать конфликта имен модулей)
+   cd storage && pytest && cd ..
+   cd api-gateway && pytest && cd ..
+   ```
 
-    ./scripts/demo.sh
+## CI/CD (GitHub Actions)
 
-The script runs POST/GET through the gateway, then asks you to stop storage
-and shows the 503 response.
-
-## Tests (run inside each service directory)
-
-    cd storage && source .venv/bin/activate && pytest -v
-    cd api-gateway && source .venv/bin/activate && pytest -v
-
-Do not run pytest from the repo root: both services have a package named `app`.
+Файл `.github/workflows/ci.yml` настраивает автоматический конвейер при каждом `push` в ветку `main`:
+1. Поднимает чистую базу данных PostgreSQL.
+2. Проверяет код линтером `ruff`.
+3. Проверяет типы с помощью `mypy`.
+4. Запускает тесты `pytest` (с передачей переменных окружения).
+5. Выполняет сборку Docker-образов (`docker build`) для обоих сервисов.
+```
+```
