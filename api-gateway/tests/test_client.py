@@ -1,5 +1,6 @@
 import httpx
 import pytest
+
 from app.domain.errors import DeviceNotFound, StorageUnavailable
 from app.storage.http_client import SmartHomeClient
 

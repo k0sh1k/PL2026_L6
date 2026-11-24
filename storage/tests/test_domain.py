@@ -1,4 +1,5 @@
 import pytest
+
 from app.domain.errors import DeviceNotFound, DuplicateDevice, InvalidDevice
 from app.domain.services import DeviceService
 from app.storage.repository import InMemoryDeviceRepository

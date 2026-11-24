@@ -1,6 +1,7 @@
+from fastapi.testclient import TestClient
+
 from app.domain.errors import StorageUnavailable
 from app.main import create_app
-from fastapi.testclient import TestClient
 
 
 class DownStorage:

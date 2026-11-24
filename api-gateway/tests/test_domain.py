@@ -1,4 +1,5 @@
 import pytest
+
 from app.domain.errors import InvalidDevice
 from app.domain.services import DeviceFacade
 
